@@ -1,0 +1,48 @@
+    /* header styling */
+    h1 {
+        color: black;
+        margin-left: 100px;
+    }
+
+    p {
+        width: 800px
+    }
+    
+    /* pagination position styling */
+    .pagination_section {
+        margin-top: 30px;
+        margin-left: 130px;
+        margin-bottom: 10px;
+    }
+    
+    /* pagination styling */
+    .pagination_section a {
+        color: black;
+        padding: 10px 30px;
+        text-decoration: none;
+        border: 1px solid steelblue;
+    }
+    
+
+    /* pagination hover effect on active*/
+    
+    .pagination_section a.active {
+        background-color: #031F3B;
+        color: white;
+    }
+
+    /* pagination hover effect on non-active */
+    .pagination_section a:hover:not(.active) {
+        background-color: skyblue;
+        color: white;
+    }
+      
+    .content {
+        margin: 50px;
+        padding: 15px;
+        width: 700px;
+        height: 200px;
+        border: 2px solid black;
+    }
+
+  
