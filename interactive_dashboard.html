@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">    
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">      
+    <link rel="stylesheet" href="Style.css">
+    <title>Hate Crime Statistics Analysis</title>
+    <style>
+      .pagination_section {
+        margin-top: 30px;
+        margin-left: 130px;
+        margin-bottom: 30px;
+    }
+    </style>
+  </head>
+
+  <body onload='init()'>
+    <h1>FBI Hate Crime Statistics(1991-2021)</h1>
+    <p>FBI defines hate crime as a committed criminal offense which is 
+      motivated, in whole or in part, by the offender’s bias(es) against a race, religion, disability, sexual orientation, ethnicity, gender, or gender identity. 
+      This visulization includes the incidents that are only motivated by the offender's bias(es). </p>
+    <div class="pagination_section">
+      <a href="./index.html">Scene 1</a>
+      <a href="./index2.html">Scene 2</a>
+      <a href="./index3.html">Scene 3</a>
+      <a class="active" href="./interactive_dashboard.html">Scene 4</a>
+    </div>
+    </div class="menu"><select id="selectButton"></select></div>
+    <div id="my_dataviz"></div>   
+    <p>* Data for this visualization is from FBI crime data explorer. Hate crime data for the nation 
+      are derived from National Incident-Based Reporting System (NIBRS) and Summary Reporting System (SRS) 
+      reports voluntarily submitted to the FBI.</p>
+    <script src='https://d3js.org/d3.v5.min.js'></script>
+    <script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
+    <script>
+      async function init() {
+
+        const dataset = await d3.csv('https://diamondls3.github.io/data2.csv', function(d) {
+            // transform data
+            d.Year = +d.Year;
+            d.Value = +d.Value; 
+            return d;});
+            
+            loadchart(dataset);
+        
+      }
+
+      function loadchart(dataset){
+        // Set dimensions and margins for the chart
+        const margin = { top: 70, right: 30, bottom: 40, left: 70 };
+        const width = 800 - margin.left - margin.right;
+        const height = 500 - margin.top - margin.bottom;
+
+        // List of groups
+        const allGroup = d3.map(dataset.filter(function(d){return d.Bias!="Unknown (offender's motivation not known)"}), function(d){return(d.Bias)}).keys()
+        // subset of dataset
+        const subset = dataset.filter(function(d){return d.Bias==allGroup[0]})
+
+        // Create the SVG element and append it to the chart container
+        const svg = d3.select("#my_dataviz")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate("+ margin.left+","+margin.top+")");
+        
+        // Set up the x and y scales
+        const x = d3.scaleLinear().range([0, width]);
+        const y = d3.scaleLinear().range([height, 0]);  
+      
+        //Define the x and y domains
+        x.domain([d3.min(dataset, d => d.Year), d3.max(dataset, d => d.Year)]);
+        y.domain([0, (d3.max(subset, d => d.Value))*1.2]);
+    
+        // Add the x-axis
+        var xAxis = svg.append("g")
+            .attr("transform","translate(0,"+height+")")
+            .call(d3.axisBottom(x)
+                .tickFormat(d3.format("d"))
+                )
+      
+        // Add the y-axis
+        var yAxis = svg.append("g")
+                   .attr("id", "y-axis")
+                   .call(d3.axisLeft(y))  
+
+        // Add the chart title
+        svg.append("text")
+          .attr("class", "chart-title")
+          .attr("x", margin.left-120)
+          .attr("y", margin.top - 100)
+          .style("font-size", "24px")
+          .style("font-weight", "bold")
+          .style("font-family", "sans-serif")
+          .text("Hate Crime Incidents Over the Years");
+            
+        // Add X axis label:
+        svg.append("text")
+          .attr("text-anchor", "middle")
+          .attr("x", margin.left+250)
+          .attr("y", height+25)
+          .attr("dy", "1em")
+          .style("font-size", "14px")
+          .style("fill", 'black')
+          .style("font-family", "sans-serif")
+          .text("Year");
+        
+        // Add Y-axis label
+        svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 0 - margin.left)
+        .attr("x", 0 - (height / 2))
+        .attr("dy", "1em")
+        .style("text-anchor", "middle")
+        .style("font-size", "14px")
+        .style("fill", 'black')
+        .style("font-family", "sans-serif")
+        .text("Number of Incidents");
+
+        // add the options to the button
+        d3.select("#selectButton")
+          .selectAll('myOptions')
+          .data(allGroup)
+          .enter()
+          .append('option')
+          .text(function (d) { return d; }) // text showed in the menu
+          .attr("value", function (d) { return d; }) // corresponding value returned by the button
+
+        // Create the line generator
+        const line = d3.line()
+                        .x(function(d) { return x(d.Year); })
+                        .y(function(d) { return y(d.Value)});
+
+         // Initialize line part with first group of the list
+        const path = svg.append("path")
+                        .datum(dataset.filter(function(d){return d.Bias==allGroup[0]}))
+                        .attr("fill", "none")
+                        .attr("stroke", "steelblue")
+                        .attr("stroke-width", 2)
+                        .attr("class", "line")
+                        .attr("d", line)
+         // Add tooltip annotation to the chart
+			  const annotations = [
+				{
+					note: {
+					  label: "Choose a bias category to see the trend",
+            wrap: 300
+					},
+					connector: {
+						end: "",        
+						type: "line",      
+						points: 1,         
+						lineType : "horizontal"
+						},
+					color: ["brown"],
+					x: 75,
+					y: 75,
+					dy: 0,
+					dx: 0
+				}
+				]
+
+			const add_Annotations = d3.annotation()
+										.annotations(annotations)
+			d3.select("svg")
+				.append("g")
+				.call(add_Annotations)
+         
+                        
+               
+        // Initialize scatter plot with first group of the list
+        // const plot = svg.selectAll("circle")
+        //                 .data(dataset.filter(function(d){return d.Bias==allGroup[0]}))
+        //                 .enter()
+        //                 .append("circle")
+        //                 .attr("cx", function(d){return x(d.Year);} )
+        //                 .attr("cy", function(d){return y(d.Value);})
+        //                 .attr("r", 5)
+        //                 .attr("fill", "steelblue")
+        //                 .style("stroke", "white")
+        //                 .attr("opacity", .70)
+       
+        // A function that update the line chart
+
+         // When the button is changed, run the updateChart function
+         d3.select("#selectButton").on("change", function(d) {
+          // recover the option that has been chosen
+          var selectedOption = d3.select(this).property("value")
+          // run the updateChart function with this selected option
+          update(selectedOption)
+        })
+      
+        function update(selectedGroup) {
+
+        // Create new data with the selection?
+        var dataFilter = dataset.filter(function(d){return d.Bias==selectedGroup})
+        y.domain([0, (d3.max(dataFilter, d => d.Value))*1.2]);
+
+        yAxis.transition().duration(1000).call(d3.axisLeft(y)) 
+
+        // Give these new data to update line
+        path
+            .datum(dataFilter)
+            .transition()
+            .duration(1000)
+            .attr("fill", "none")
+            .attr("stroke", "steelblue")
+            .attr("stroke-width", 2)
+            .attr("class", "line")
+            .attr("d", line)
+        
+                      
+        }
+        
+       
+      }
+      
+      </script>
+  </body>
+</html>
+
+

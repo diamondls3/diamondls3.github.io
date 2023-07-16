@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">    
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">      
+    <link rel="stylesheet" href="Style.css">
+    <title>Hate Crime Statistics Analysis</title>
+  </head>
+
+  <body onload='init()'>
+    <h1>FBI Hate Crime Statistics(1991-2021)</h1>
+    <p>FBI defines hate crime as a committed criminal offense which is 
+      motivated, in whole or in part, by the offender’s bias(es) against a race, religion, disability, sexual orientation, ethnicity, gender, or gender identity. 
+      This visulization includes the incidents that are only motivated by the offender's bias(es). </p>
+    <div class="pagination_section">
+      <a href="./index.html">Scene 1</a>
+      <a class="active" href="./index2.html">Scene 2</a>
+      <a href="./index3.html">Scene 3</a>
+      <a href="./interactive_dashboard.html">Scene 4</a>
+    </div>
+      <div id="chart-container"></div>
+    <p>* Data for this visualization is from FBI crime data explorer. Hate crime data for the nation 
+      are derived from National Incident-Based Reporting System (NIBRS) and Summary Reporting System (SRS) 
+      reports voluntarily submitted to the FBI.</p>
+    <script src='https://d3js.org/d3.v5.min.js'></script>
+    <script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
+    <script>
+		async function init() {
+
+			const data = await d3.csv('https://diamondls3.github.io/data2.csv', function(d) {
+				// transform data
+				d.Year = +d.Year;
+				d.Value = +d.Value; 
+				return d;});
+				dataset = data.filter(function(d){return d.Bias=='Anti-White'})
+				loadchart(dataset);
+
+			}
+
+			function loadchart(dataset){
+			// Set dimensions and margins for the chart
+			const margin = { top: 70, right: 30, bottom: 40, left: 70 };
+			const width = 800 - margin.left - margin.right;
+			const height = 500 - margin.top - margin.bottom;
+
+			// Create the SVG element and append it to the chart container
+			const svg = d3.select("#chart-container")
+				.append("svg")
+				.attr("width", width + margin.left + margin.right)
+				.attr("height", height + margin.top + margin.bottom)
+				.append("g")
+				.attr("transform", "translate("+ margin.left+","+margin.top+")");
+
+			// Set up the x and y scales
+			const x = d3.scaleLinear().range([0, width]);
+			const y = d3.scaleLinear().range([height, 0]);  
+
+			//Define the x and y domains
+			x.domain([d3.min(dataset, d => d.Year), d3.max(dataset, d => d.Year)]);
+			y.domain([0, d3.max(dataset, d => d.Value)]);
+
+			// Add the x-axis
+			svg.append("g")
+				.attr("transform","translate(0,"+height+")")
+				.call(d3.axisBottom(x)
+					.tickFormat(d3.format("d"))
+					)
+
+			// Add the y-axis
+			svg.append("g")
+				.call(d3.axisLeft(y))   
+
+      // Add the chart title
+			svg.append("text")
+				.attr("class", "chart-title")
+				.attr("x", margin.left-120)
+				.attr("y", margin.top - 100)
+				.style("font-size", "24px")
+				.style("font-weight", "bold")
+				.style("font-family", "sans-serif")
+				.text("Hate Crime Incidents Motivated by Anti-White Bias");
+					
+			// Add X axis label:
+			svg.append("text")
+				.attr("text-anchor", "middle")
+				.attr("x", margin.left+250)
+				.attr("y", height+25)
+				.attr("dy", "1em")
+				.style("font-size", "14px")
+				.style("fill", 'black')
+				.style("font-family", "sans-serif")
+				.text("Year");
+			
+			// Add Y-axis label
+			svg.append("text")
+			.attr("transform", "rotate(-90)")
+			.attr("y", 0 - margin.left)
+			.attr("x", 0 - (height / 2))
+			.attr("dy", "1em")
+			.style("text-anchor", "middle")
+			.style("font-size", "14px")
+			.style("fill", 'black')
+			.style("font-family", "sans-serif")
+			.text("Number of Incidents");
+
+			// Create the line generator
+			const line = d3.line()
+					.x(function(d) { return x(d.Year); })
+					.y(function(d) { return y(d.Value)});
+
+			// Add the line path to the SVG element
+			const path = svg.append("path")
+				.datum(dataset)
+				.attr("fill", "none")
+				.attr("stroke", "steelblue")
+				.attr("stroke-width", 2)
+				.attr("class", "line")
+				.attr("d", line)
+
+			// create a tooltip
+			var Tooltip = d3.select("#chart-container").append("div")
+							.style("opacity", 0)
+							.style("position", "absolute")
+							.attr("class", "tooltip")
+							.style("background-color", "#f9b2b2")
+							.style("border", 0)
+							.style("border-width", "2px")
+							.style("border-radius", "5px")
+							.style("padding", "5px")
+
+			// Three function that change the tooltip when user hover / move / leave a cell
+			var mouseover = function(d) {
+				Tooltip
+					.style("opacity", 1)
+				d3.select(this)
+					.style("r", 8) 
+					.attr("fill", "brown")
+					.style("opacity", 0.8)
+					.style("stroke", "brown")
+			}
+			var mousemove = function(d) {
+				Tooltip
+					.html("Year:" + d.Year+ "; Number of Incidents:" + d.Value)
+					.style("top", (parseInt(d3.select(this).attr("cy")) + document.getElementById("chart-container").offsetTop)+30 + "px")
+					.style("left", (parseInt(d3.select(this).attr("cx")) + document.getElementById("chart-container").offsetLeft) + "px")
+
+			}
+			
+			var mouseleave = function(d) {
+				Tooltip
+					.style("opacity", 0)
+				d3.select(this)
+					.style("r", 5)
+					.attr("fill", "steelblue")
+					.style("stroke", "white")
+					.attr("opacity", .70)
+			}
+
+			// add points
+			svg.append("g")
+				.selectAll("dot")
+				.data(dataset).enter()
+				.append("circle")
+				.attr("cx", function(d){return x(d.Year);} )
+				.attr("cy", function(d){return y(d.Value);})
+				.attr("r", 5)
+				.attr("fill", "steelblue")
+				.style("stroke", "white")
+				.attr("opacity", .70)
+				.on("mouseover", mouseover)
+				.on("mousemove", mousemove)
+				.on("mouseleave", mouseleave)
+
+			// Add tooltip annotation to the chart
+			const tooltip_annotations = [
+				{
+					note: {
+					label: "Hover over the data point to see number of incidents"
+					},
+					connector: {
+						end: "arrow",        
+						type: "line",      
+						points: 1,         
+						lineType : "horizontal"
+						},
+					color: ["brown"],
+					x: 78,
+					y: 240,
+					dy: 20,
+					dx: 20
+				}
+				]
+
+			const add_tooltipAnnotations = d3.annotation()
+										.annotations(tooltip_annotations)
+			d3.select("svg")
+				.append("g")
+				.call(add_tooltipAnnotations)
+
+			// Add fewer incidents annotation to the left
+			const low_left_annotations = [
+				{
+					note: {
+					title: "Anti-White incidents peaked in 1994 and downtrend since then till 2020",
+					
+					},
+					connector: {
+						end: "arrow",        
+						type: "line",      
+						points: 1,         
+						lineType : "horizontal"
+						},
+					color: ["orange"],
+					x: 140,
+					y: 65,
+					dy: 0,
+					dx: 60
+				}
+				]
+
+			const add_lowleftAnnotations = d3.annotation()
+										.annotations(low_left_annotations)
+			d3.select("svg")
+				.append("g")
+				.call(add_lowleftAnnotations)
+			
+
+			// Add covid annotation to the chart
+			const covid_annotations = [
+				{
+					note: {
+					label: "",
+					title: "In year 2020, anti-White case numbers reached the highest since 1996"
+					},
+					connector: {
+						end: "arrow",        
+						type: "line",      
+						points: 1,         
+						lineType : "horizontal"
+						},
+					color: ['orange'],
+					x: 730,
+					y: 175,
+					dy: -1,
+					dx: -50
+				}
+				]
+
+			const add_covidAnnotations = d3.annotation()
+										.annotations(covid_annotations)
+			d3.select("svg")
+				.append("g")
+				.call(add_covidAnnotations)
+
+			// Add annotation to the chart
+      const annotations = [
+				{
+					note: {
+            title: "Anti-White",
+					  label: "In 2021, the number of hate crime incidents motivated by Anti-White bias ranks second among all the bias categories",
+                       wrap: 300
+					},
+					connector: {
+						end: "",        
+						type: "line",      
+						points: 1,         
+						lineType : "horizontal"
+						},
+					color: ["red"],
+					x: 90,
+					y: 375,
+					dy: 0,
+					dx: 0
+				}
+				]
+
+			const add_Annotations = d3.annotation()
+										.annotations(annotations)
+			d3.select("svg")
+				.append("g")
+				.call(add_Annotations)
+
+			
+
+		}
+
+
+	</script>
+  </body>
+</html>
+
+
